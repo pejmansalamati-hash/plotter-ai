@@ -5,13 +5,20 @@ from pydantic import BaseModel
 import sqlite3
 
 app = FastAPI()
-
+from fastapi.responses import FileResponse, RedirectResponse
+@app.post("/search")
+async def search(q: str = Form(...)):
+    try:
+        result = search_solution(q)
+        return {"result": result}
+    except Exception as e:
+        return {"error": str(e)}
 app.add_middleware(
     SessionMiddleware,
     secret_key="93a3302f98e8733e4c341443385470cfb8d1844f1f20e6a73337f0feef032760",
     max_age=3600
 )
-from fastapi.responses import FileResponse, RedirectResponse
+
 
 @app.get("/")
 def home():
