@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>ورود کارشناس</title>
+
+    <style>
+        body {
+            direction: rtl;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .login-box {
+            background: white;
+            width: 350px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-box">
+
+    <h1>🖨️ ورود کارشناس</h1>
+
+    <label>نام کاربری</label>
+
+    <input
+        id="username"
+        type="text"
+        placeholder="نام کاربری">
+
+    <label>رمز عبور</label>
+
+    <input
+        id="password"
+        type="password"
+        placeholder="رمز عبور">
+
+    <button onclick="login()">
+        ورود
+    </button>
+
+    <div id="message"></div>
+
+</div>
+
+<script>
+
+async function login() {
+
+    const username =
+        document.getElementById("username").value;
+
+    const password =
+        document.getElementById("password").value;
+
+    const response =
+        await fetch("/admin/login", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+
+        });
+
+    const data =
+        await response.json();
+
+    if (data.status === "ok") {
+
+        window.location.href = "/admin";
+
+    } else {
+
+        document.getElementById("message").innerText =
+            "❌ نام کاربری یا رمز عبور اشتباه است.";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,648 @@
+```html
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+
+    <title>پنل کارشناس</title>
+
+    <style>
+
+        body {
+            direction: rtl;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            color: #222;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-top: 15px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .pending-item {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 18px;
+            margin-top: 15px;
+        }
+
+        .question {
+            font-weight: bold;
+            font-size: 17px;
+            color: #222;
+        }
+
+        .answer {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 12px;
+            line-height: 2;
+            white-space: pre-line;
+        }
+
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 130px;
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 15px;
+            resize: vertical;
+        }
+
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 8px;
+            margin-top: 12px;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+        }
+
+        .btn-approve {
+            background: #198754;
+            color: white;
+        }
+
+        .btn-reject {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-save {
+            background: #007bff;
+            color: white;
+        }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 30px;
+        }
+
+        .status {
+            margin-top: 15px;
+            color: #198754;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-family: inherit;
+        }
+        select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-family: inherit;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <h1>🖨️ پنل کارشناس</h1>
+
+        <p>
+            بررسی، اصلاح و تأیید پاسخ‌های هوش مصنوعی
+        </p>
+        <button
+        onclick="logout()"
+        style="
+            background:#dc3545;
+            color:white;
+            border:none;
+            padding:10px 18px;
+            border-radius:8px;
+            cursor:pointer;
+            font-weight:bold;
+        ">
+        🚪 خروج
+        </button>
+    </div>
+<div class="card">
+
+    <h2>🧠 افزودن تجربه کارشناس</h2>
+
+    <p style="color:#666;">
+        اگر تجربه یا راه‌حل جدیدی دارید، آن را مستقیماً
+        به پایگاه دانش شرکت اضافه کنید.
+    </p>
+
+    <label>نوع پلاتر</label>
+
+    <select id="expert-plotter">
+        <option value="نامشخص">نامشخص</option>
+        <option value="جوهری">جوهری</option>
+        <option value="قلمی">قلمی</option>
+    </select>
+
+
+    <label>نوع اتصال</label>
+
+    <select id="expert-connection">
+        <option value="نامشخص">نامشخص</option>
+        <option value="USB">USB</option>
+        <option value="شبکه">شبکه</option>
+    </select>
+
+
+    <label>عنوان مشکل</label>
+
+    <input
+        id="expert-title"
+        placeholder="مثلاً: هد دستگاه هنگام حرکت صدا می‌دهد">
+
+
+    <label>کلمات کلیدی</label>
+
+    <input
+        id="expert-keywords"
+        placeholder="مثلاً: صدای تق تق, صدای هد, صدای حرکت">
+
+
+    <label>راه‌حل</label>
+
+    <textarea
+        id="expert-solution"
+        placeholder="راه‌حل دقیق مشکل را وارد کنید..."></textarea>
+
+
+    <button
+        class="btn-save"
+        onclick="addExpertKnowledge()">
+
+        💾 افزودن به پایگاه دانش
+
+    </button>
+
+
+    <div
+        id="expert-status"
+        class="status">
+    </div>
+
+</div>
+
+    <div class="card">
+
+        <h2>⏳ پاسخ‌های منتظر تأیید</h2>
+
+        <div id="pending-list">
+            در حال دریافت اطلاعات...
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function loadPending() {
+
+    const list =
+        document.getElementById("pending-list");
+async function logout() {
+    console.log("🔥 LOGOUT CLICKED");
+
+    try {
+        const response = await fetch("/admin/logout", {
+            method: "POST"
+        });
+
+        console.log("🔥 LOGOUT STATUS:", response.status);
+
+        if (response.ok || response.redirected) {
+            window.location.href = "/admin/login";
+            return;
+        }
+
+        alert("❌ Logout خطا دارد. Status: " + response.status);
+
+    } catch (error) {
+        console.error("🔥 LOGOUT ERROR:", error);
+        alert("❌ خطا در ارتباط با سرور");
+    }
+}
+    try {
+
+        const response =
+            await fetch("/admin/pending");
+
+
+        if (!response.ok) {
+
+            throw new Error("خطا در دریافت Pendingها");
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const items =
+            data.data;
+
+
+        if (!items || items.length === 0) {
+
+            list.innerHTML =
+                '<div class="empty">✅ موردی برای بررسی وجود ندارد.</div>';
+
+            return;
+        }
+
+
+        let html = "";
+
+
+        items.forEach(item => {
+
+            const id = item[0];
+            const question = item[1];
+            const answer = item[2];
+
+
+            html += `
+
+                <div class="pending-item">
+
+                    <div class="question">
+                        ❓ ${question}
+                    </div>
+
+
+                    <div class="answer"
+                         id="answer-${id}">
+                        ${answer}
+                    </div>
+
+
+                    <div>
+
+                        <button
+                            class="btn-edit"
+                            onclick="editAnswer(${id})">
+                            ✏️ ویرایش پاسخ
+                        </button>
+
+
+                        <button
+                            class="btn-approve"
+                            onclick="approveAnswer(${id})">
+                            ✅ تأیید
+                        </button>
+
+
+                        <button
+                            class="btn-reject"
+                            onclick="rejectAnswer(${id})">
+                            ❌ رد
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="edit-box-${id}"
+                        style="display:none;">
+
+                        <textarea
+                            id="edit-text-${id}">${answer}</textarea>
+
+                        <br>
+
+                        <button
+                            class="btn-save"
+                            onclick="saveAnswer(${id})">
+                            💾 ذخیره ویرایش
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        });
+
+
+        list.innerHTML = html;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        list.innerHTML =
+            '<div class="empty">❌ خطا در دریافت اطلاعات</div>';
+
+    }
+
+}
+
+
+function editAnswer(id) {
+
+    document.getElementById(
+        `edit-box-${id}`
+    ).style.display = "block";
+
+}
+
+
+async function saveAnswer(id) {
+
+    const answer =
+        document.getElementById(
+            `edit-text-${id}`
+        ).value;
+
+
+    const response =
+        await fetch(`/admin/pending/${id}`, {
+
+            method: "PUT",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                answer: answer
+            })
+
+        });
+
+
+    if (!response.ok) {
+
+        alert("❌ ذخیره ویرایش انجام نشد");
+
+        return;
+    }
+
+
+    alert("✅ پاسخ ویرایش شد");
+
+    async function logout() {
+
+    console.log("🔥 LOGOUT CLICKED");
+
+    try {
+
+        const response = await fetch("/admin/logout", {
+            method: "POST"
+        });
+
+        console.log("🔥 LOGOUT STATUS:", response.status);
+
+        const data = await response.json();
+
+        console.log("🔥 LOGOUT RESPONSE:", data);
+
+        if (response.ok && data.status === "logout_ok") {
+
+            window.location.href = "/admin/login";
+
+        } else {
+
+            alert("❌ خروج انجام نشد");
+
+        }
+
+    } catch (error) {
+
+        console.error("🔥 LOGOUT ERROR:", error);
+
+        alert("❌ خطا در ارتباط با سرور");
+
+    }
+}
+
+    loadPending();
+
+}
+
+
+async function approveAnswer(id) {
+
+    const response =
+        await fetch(`/admin/approve/${id}`, {
+            method: "POST"
+        });
+
+
+    if (!response.ok) {
+
+        alert("❌ تأیید انجام نشد");
+
+        return;
+    }
+
+
+    alert("✅ پاسخ تأیید و به پایگاه دانش اضافه شد");
+
+    loadPending();
+
+}
+
+
+async function rejectAnswer(id) {
+
+    const response =
+        await fetch(`/admin/reject/${id}`, {
+            method: "POST"
+        });
+
+
+    if (!response.ok) {
+
+        alert("❌ رد پاسخ انجام نشد");
+
+        return;
+    }
+
+
+    alert("❌ پاسخ رد شد");
+
+    loadPending();
+
+}
+async function addExpertKnowledge() {
+
+    const plotter =
+        document.getElementById("expert-plotter").value;
+
+    const connection =
+        document.getElementById("expert-connection").value;
+
+    const title =
+        document.getElementById("expert-title").value.trim();
+
+    const keywords =
+        document.getElementById("expert-keywords").value.trim();
+
+    const solution =
+        document.getElementById("expert-solution").value.trim();
+
+
+    if (!title || !keywords || !solution) {
+
+        alert("⚠️ عنوان، کلمات کلیدی و راه‌حل الزامی هستند.");
+
+        return;
+    }
+
+
+    const formData = new FormData();
+
+    formData.append("plotter_type", plotter);
+    formData.append("connection", connection);
+    formData.append("title", title);
+    formData.append("keywords", keywords);
+    formData.append("solution", solution);
+
+
+    try {
+
+        const response =
+            await fetch("/admin/knowledge", {
+
+                method: "POST",
+
+                body: formData
+
+            });
+
+
+        if (!response.ok) {
+
+            throw new Error("خطا در ذخیره دانش");
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "🔥 KNOWLEDGE ADDED:",
+            data
+        );
+
+
+        document.getElementById(
+            "expert-status"
+        ).innerText =
+            "✅ تجربه کارشناس با موفقیت به پایگاه دانش اضافه شد.";
+
+
+        document.getElementById(
+            "expert-title"
+        ).value = "";
+
+        document.getElementById(
+            "expert-keywords"
+        ).value = "";
+
+        document.getElementById(
+            "expert-solution"
+        ).value = "";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById(
+            "expert-status"
+        ).innerText =
+            "❌ ذخیره اطلاعات انجام نشد.";
+
+    }
+
+}
+async function logout() {
+
+    console.log("🔥 LOGOUT CLICKED");
+
+    try {
+
+        const response = await fetch("/admin/logout", {
+            method: "POST"
+        });
+
+        console.log("🔥 LOGOUT STATUS:", response.status);
+
+        if (!response.ok) {
+            alert("❌ Logout خطا داد. کد: " + response.status);
+            return;
+        }
+
+        console.log("✅ LOGOUT SUCCESS");
+
+        window.location.href = "/admin/login";
+
+    } catch (error) {
+
+        console.error("❌ LOGOUT ERROR:", error);
+
+        alert("❌ خطا در ارتباط با سرور");
+
+    }
+}
+loadPending();
+
+</script>
+
+</body>
+</html>
+```

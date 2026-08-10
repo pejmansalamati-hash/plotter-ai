@@ -1,0 +1,288 @@
+﻿```html
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>دستیار هوشمند پلاتر</title>
+
+    <style>
+        body {
+            direction: rtl;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            color: #222;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            margin-top: 15px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 7px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-family: inherit;
+            font-size: 15px;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: #007bff;
+            color: white;
+            padding: 13px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        #result {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .answer {
+            background: #f8f9fa;
+            border-right: 4px solid #007bff;
+            padding: 18px;
+            border-radius: 8px;
+            line-height: 2;
+            white-space: pre-line;
+        }
+
+        .source {
+            margin-top: 12px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 15px;
+        }
+
+        .error {
+            background: #fff3f3;
+            color: #b00020;
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>🖨️ دستیار هوشمند پلاتر</h1>
+        <p>مشکل پلاتر خود را توضیح دهید تا راه‌حل مناسب را پیدا کنیم.</p>
+    </div>
+
+    <div class="card">
+
+        <label for="plotter_type">نوع پلاتر</label>
+
+        <select id="plotter_type">
+            <option value="قلمی">پلاتر قلمی</option>
+            <option value="جوهری">پلاتر جوهری</option>
+        </select>
+
+
+        <label for="connection">نوع اتصال</label>
+
+        <select id="connection">
+            <option value="USB">USB</option>
+            <option value="شبکه">Network</option>
+        </select>
+
+
+        <label for="issue">شرح مشکل</label>
+
+        <textarea
+            id="issue"
+            placeholder="مثلاً: پرینتر روشن نمی‌شود"
+        ></textarea>
+
+
+        <button class="btn-primary" onclick="searchProblem()">
+            🔍 بررسی مشکل
+        </button>
+
+    </div>
+
+
+    <div id="result" class="card">
+
+        <h3>💡 پاسخ</h3>
+
+        <div id="answer" class="answer"></div>
+
+        <div id="source" class="source"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function searchProblem() {
+
+    const plotterType =
+        document.getElementById("plotter_type").value;
+
+    const connection =
+        document.getElementById("connection").value;
+
+    const issue =
+        document.getElementById("issue").value.trim();
+
+
+    if (!issue) {
+
+        alert("لطفاً مشکل پلاتر را وارد کنید.");
+
+        return;
+    }
+
+
+    const resultBox =
+        document.getElementById("result");
+
+    const answerBox =
+        document.getElementById("answer");
+
+    const sourceBox =
+        document.getElementById("source");
+
+
+    resultBox.style.display = "block";
+
+    answerBox.innerHTML =
+        '<div class="loading">⏳ در حال بررسی مشکل...</div>';
+
+    sourceBox.innerText = "";
+
+
+    try {
+
+        const url =
+            `/troubleshoot-ai?plotter_type=${encodeURIComponent(plotterType)}&connection=${encodeURIComponent(connection)}&issue=${encodeURIComponent(issue)}`;
+
+
+        const response = await fetch("/ask", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                plotter_type: plotterType,
+                connection: connection,
+                text: issue
+            })
+        });
+            
+
+        if (!response.ok) {
+
+            throw new Error("خطا در ارتباط با سرور");
+        }
+
+
+        const data =
+            await response.json();
+        console.log("🔥 SERVER RESPONSE:", JSON.stringify(data));
+
+if (data.status === "found") {
+
+    answerBox.innerText = data.answer;
+
+    sourceBox.innerText =
+        "📚 منبع پاسخ: پایگاه دانش شرکت";
+
+}
+
+else if (data.status === "ai_answer") {
+
+    answerBox.innerText = data.answer;
+
+    sourceBox.innerText =
+        "🤖 منبع پاسخ: هوش مصنوعی";
+
+}
+
+else {
+
+    answerBox.innerText =
+        "پاسخی برای این مشکل پیدا نشد.";
+
+    sourceBox.innerText = "";
+
+}
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        answerBox.innerHTML =
+            '<div class="error">ارتباط با سرور با مشکل مواجه شد. لطفاً دوباره تلاش کنید.</div>';
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
+```
