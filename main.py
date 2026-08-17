@@ -3,7 +3,7 @@ from fastapi import FastAPI, Form, Request, HTTPException
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 import sqlite3
-
+DB_NAME = "errors.db"
 app = FastAPI()
 from fastapi.responses import FileResponse, RedirectResponse
 @app.post("/search")
@@ -63,6 +63,27 @@ def admin_logout(request: Request):
         "status": "logout_ok"
     }
 print("🔥 POST LOGOUT ROUTE LOADED")
+
+@app.get("/admin/concepts")
+def get_concepts(request: Request):
+
+    require_expert(request)
+
+    conn = sqlite3.connect("errors.db")
+    conn.row_factory = sqlite3.Row
+
+    rows = conn.execute("""
+        SELECT DISTINCT concept
+        FROM concepts
+        WHERE active=1
+        ORDER BY concept
+    """).fetchall()
+
+    conn.close()
+
+    return {
+        "data": [r["concept"] for r in rows]
+    }
 @app.get("/admin")
 def admin_page(request: Request):
 
@@ -73,6 +94,7 @@ def admin_page(request: Request):
         )
 
     return FileResponse("admin.html")
+
 # مدل ورودی سوال
 class Question(BaseModel):
     plotter_type: str
@@ -413,44 +435,171 @@ def add_knowledge(
     plotter_type: str = Form(...),
     connection: str = Form(...),
     title: str = Form(...),
-    keywords: str = Form(...),
+    concepts: str = Form(...),
     solution: str = Form(...)
 ):
 
     require_expert(request)
 
-    # ادامه کد قبلی
-    plotter_type: str = Form(...),
-    connection: str = Form(...),
-    title: str = Form(...),
-    keywords: str = Form(...),
-    solution: str = Form(...)
+    import json
     import sqlite3
 
-    conn = sqlite3.connect("errors.db")
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT INTO errors
-        (plotter_type, connection, title, keywords, solution, approved)
-        VALUES (?, ?, ?, ?, ?, 1)
-    """, (
-        plotter_type,
-        connection,
-        title,
-        keywords,
-        solution
-    ))
+    try:
 
-    new_id = cursor.lastrowid
+        # =====================================================
+        # 1. تبدیل Concepts دریافتی از HTML
+        # =====================================================
 
-    conn.commit()
-    conn.close()
+        try:
+            concept_names = json.loads(concepts)
+        except json.JSONDecodeError:
+            return {
+                "status": "error",
+                "message": "فرمت Concepts نامعتبر است."
+            }
 
-    return {
-        "status": "added",
-        "id": new_id
-    }
+        if not isinstance(concept_names, list) or not concept_names:
+
+            return {
+                "status": "error",
+                "message": "حداقل یک Concept باید انتخاب شود."
+            }
+
+
+        # =====================================================
+        # 2. ثبت Error
+        # =====================================================
+
+        cursor.execute("""
+            INSERT INTO errors
+            (
+                plotter_type,
+                connection,
+                title,
+                keywords,
+                solution,
+                approved
+            )
+            VALUES (?, ?, ?, ?, ?, 1)
+        """, (
+            plotter_type,
+            connection,
+            title,
+            "",
+            solution
+        ))
+
+        error_id = cursor.lastrowid
+
+
+        # =====================================================
+        # 3. پیدا کردن Concept ID و ساخت Relation
+        # =====================================================
+
+        inserted_concepts = []
+
+        for concept_name in concept_names:
+
+            cursor.execute("""
+                SELECT id
+                FROM concepts
+                WHERE concept = ?
+                  AND active = 1
+                LIMIT 1
+            """, (concept_name,))
+
+            row = cursor.fetchone()
+
+
+            if not row:
+
+                raise ValueError(
+                    f"Concept not found: {concept_name}"
+                )
+
+
+            concept_id = row[0]
+
+
+            # جلوگیری از Relation تکراری
+            cursor.execute("""
+                SELECT id
+                FROM error_concepts
+                WHERE error_id = ?
+                  AND concept_id = ?
+            """, (
+                error_id,
+                concept_id
+            ))
+
+            existing = cursor.fetchone()
+
+
+            if not existing:
+
+                cursor.execute("""
+                    INSERT INTO error_concepts
+                    (
+                        error_id,
+                        concept_id,
+                        weight
+                    )
+                    VALUES (?, ?, ?)
+                """, (
+                    error_id,
+                    concept_id,
+                    10
+                ))
+
+                inserted_concepts.append({
+                    "concept": concept_name,
+                    "concept_id": concept_id
+                })
+
+
+        # =====================================================
+        # 4. ثبت نهایی
+        # =====================================================
+
+        conn.commit()
+
+
+        print("🔥 EXPERT KNOWLEDGE ADDED")
+        print("ERROR ID:", error_id)
+        print("TITLE:", title)
+        print("PLOTTER:", plotter_type)
+        print("CONNECTION:", connection)
+        print("CONCEPTS:", inserted_concepts)
+
+
+        return {
+            "status": "added",
+            "id": error_id,
+            "concepts": inserted_concepts
+        }
+
+
+    except Exception as e:
+
+        # اگر هر قسمت شکست خورد،
+        # Error و Relationها با هم Rollback می‌شوند.
+
+        conn.rollback()
+
+        print("❌ EXPERT KNOWLEDGE ERROR:", e)
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+    finally:
+
+        conn.close()
 print("🔥 FINAL REGISTERED ROUTES:")
 
 for route in app.routes:

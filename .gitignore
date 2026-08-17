@@ -1,2 +1,2 @@
-git add .
-git commit -m "add gitignore"
+__pycache__/
+*.pyc

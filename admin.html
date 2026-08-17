@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="fa">
 <head>
@@ -198,11 +197,19 @@
         placeholder="مثلاً: هد دستگاه هنگام حرکت صدا می‌دهد">
 
 
-    <label>کلمات کلیدی</label>
+    <label>مفاهیم مرتبط</label>
 
-    <input
-        id="expert-keywords"
-        placeholder="مثلاً: صدای تق تق, صدای هد, صدای حرکت">
+    <div id="concept-list"
+     style="
+        border:1px solid #ccc;
+        border-radius:8px;
+        padding:10px;
+        background:#fafafa;
+        max-height:220px;
+        overflow:auto;
+    ">
+    در حال دریافت مفاهیم...
+    </div>
 
 
     <label>راه‌حل</label>
@@ -242,7 +249,43 @@
 
 
 <script>
+async function loadConcepts() {
 
+    const box = document.getElementById("concept-list");
+
+    try {
+
+        const response = await fetch("/admin/concepts");
+
+        const data = await response.json();
+
+        let html = "";
+
+        data.data.forEach(c => {
+
+            html += `
+                <label style="display:block;margin-bottom:6px;">
+                    <input
+                        type="checkbox"
+                        class="concept-checkbox"
+                        value="${c}">
+                    ${c}
+                </label>
+            `;
+
+        });
+
+        box.innerHTML = html;
+
+    }
+
+    catch(e){
+
+        box.innerHTML = "خطا در دریافت مفاهیم";
+
+    }
+
+}
 async function loadPending() {
 
     const list =
@@ -526,27 +569,33 @@ async function addExpertKnowledge() {
     const title =
         document.getElementById("expert-title").value.trim();
 
-    const keywords =
-        document.getElementById("expert-keywords").value.trim();
-
     const solution =
         document.getElementById("expert-solution").value.trim();
 
+    const concepts = [];
 
-    if (!title || !keywords || !solution) {
+    document
+        .querySelectorAll(".concept-checkbox:checked")
+        .forEach(c => {
+            concepts.push(c.value);
+        });
 
-        alert("⚠️ عنوان، کلمات کلیدی و راه‌حل الزامی هستند.");
+    if (!title || !solution || concepts.length === 0) {
 
-        return;
-    }
+    alert("حداقل یک مفهوم باید انتخاب شود.");
 
+    return;
+}
 
     const formData = new FormData();
 
     formData.append("plotter_type", plotter);
     formData.append("connection", connection);
     formData.append("title", title);
-    formData.append("keywords", keywords);
+    formData.append(
+    "concepts",
+    JSON.stringify(concepts)
+    );
     formData.append("solution", solution);
 
 
@@ -589,10 +638,7 @@ async function addExpertKnowledge() {
             "expert-title"
         ).value = "";
 
-        document.getElementById(
-            "expert-keywords"
-        ).value = "";
-
+        
         document.getElementById(
             "expert-solution"
         ).value = "";
@@ -639,6 +685,7 @@ async function logout() {
 
     }
 }
+loadConcepts();
 loadPending();
 
 </script>
