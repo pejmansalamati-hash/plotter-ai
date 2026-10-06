@@ -202,16 +202,40 @@ def save_unknown(question):
 @app.get("/test-avalai")
 def test_avalai():
     import requests
+    import os
+
+    url = "https://api.avalai.ir/v1/responses"
+
+    api_key = os.getenv("AVALAI_API_KEY")
+
+    if not api_key:
+        return {
+            "status": "failed",
+            "error": "AVALAI_API_KEY پیدا نشد"
+        }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "gpt-4.1-mini",
+        "input": "سلام. فقط پاسخ بده: تست موفق است."
+    }
 
     try:
-        response = requests.get(
-            "https://api.avalai.ir",
-            timeout=10
+        response = requests.post(
+            url,
+            headers=headers,
+            json=data,
+            timeout=30
         )
 
         return {
-            "status": "connected",
-            "http_status": response.status_code
+            "status": "response_received",
+            "http_status": response.status_code,
+            "response": response.text
         }
 
     except Exception as e:
