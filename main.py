@@ -197,7 +197,29 @@ def save_unknown(question):
 
     conn.commit()
     conn.close()
+    
+# "/test-avalai"
+@app.get("/test-avalai")
+def test_avalai():
+    import requests
 
+    try:
+        response = requests.get(
+            "https://api.avalai.ir",
+            timeout=10
+        )
+
+        return {
+            "status": "connected",
+            "http_status": response.status_code
+        }
+
+    except Exception as e:
+        return {
+            "status": "failed",
+            "error_type": type(e).__name__,
+            "error": str(e)
+        }
 # API اصلی
 @app.post("/ask")
 def ask_question(q: Question):
