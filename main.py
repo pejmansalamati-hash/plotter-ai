@@ -671,12 +671,12 @@ def ask_ai(question, context):
 
         return answer.strip()
 
-except Exception as e:
-    print("========== AI ERROR ==========")
-    print("ERROR TYPE:", type(e).__name__)
-    print("ERROR:", str(e))
-    print("==============================")
-    return f"خطا در ارتباط با AI: {str(e)}"
+    except Exception as e:
+        print("========== AI ERROR ==========")
+        print("ERROR TYPE:", type(e).__name__)
+        print("ERROR:", str(e))
+        print("==============================")
+        return f"خطا در ارتباط با AI: {str(e)}"
 def save_pending(question, answer):
     import sqlite3
     import os
