@@ -683,7 +683,7 @@ def ask_ai(question, context):
         return "خطا: کلید AVALAI_API_KEY پیدا نشد"
 
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {aa-wt4O4OOlzOLG5OYhP7xiMpuVpsmTkqXsWYwDCx9OiXytrW2J}",
         "Content-Type": "application/json"
     }
 
