@@ -649,10 +649,12 @@ def ask_ai(question, context):
     print("ASK_AI CALLED")
     url = "https://api.avalai.ir/v1/responses"
 
-    headers = {
-        "Authorization": "Bearer aa-wt4O4OOlzOLG5OYhP7xiMpuVpsmTkqXsWYwDCx9OiXytrW2J",
-        "Content-Type": "application/json"
-    }
+    import os
+
+headers = {
+    "Authorization": f"Bearer {os.getenv('aa-wt4O4OOlzOLG5OYhP7xiMpuVpsmTkqXsWYwDCx9OiXytrW2J')}",
+    "Content-Type": "application/json"
+}
 
     prompt = f"""
     اگر پاسخ در اطلاعات زیر وجود دارد، از همان استفاده کن.
