@@ -670,31 +670,38 @@ def extract_avalai_answer(result):
         return None
 def ask_ai(question, context):
     import requests
-    print("ASK_AI CALLED")
-    url = "https://api.avalai.ir/v1/responses"
-
     import os
 
-headers = {
-    "Authorization": f"Bearer {os.getenv('aa-wt4O4OOlzOLG5OYhP7xiMpuVpsmTkqXsWYwDCx9OiXytrW2J')}",
-    "Content-Type": "application/json"
-}
+    print("ASK_AI CALLED")
+
+    url = "https://api.avalai.ir/v1/responses"
+
+    api_key = os.getenv("AVALAI_API_KEY")
+
+    if not api_key:
+        print("AVALAI_API_KEY NOT FOUND")
+        return "خطا: کلید AVALAI_API_KEY پیدا نشد"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
 
     prompt = f"""
-    اگر پاسخ در اطلاعات زیر وجود دارد، از همان استفاده کن.
+اگر پاسخ در اطلاعات زیر وجود دارد، از همان استفاده کن.
 
-    اگر وجود ندارد:
-    ابتدا راه‌حل‌های ساده و رایج را پیشنهاد بده (مثل برق، کابل، تنظیمات).
-    اگر واقعاً هیچ راه‌حلی نمی‌دانی، بگو: نیاز به بررسی بیشتر دارد.
+اگر وجود ندارد:
+ابتدا راه‌حل‌های ساده و رایج را پیشنهاد بده (مثل برق، کابل، تنظیمات).
+اگر واقعاً هیچ راه‌حلی نمی‌دانی، بگو: نیاز به بررسی بیشتر دارد.
 
-    پاسخ کوتاه و کاربردی باشد.
+پاسخ کوتاه و کاربردی باشد.
 
-    اطلاعات:
-    {context}
+اطلاعات:
+{context}
 
-    سوال:
-    {question}
-    """
+سوال:
+{question}
+"""
 
     data = {
         "model": "gpt-4.1-mini",
@@ -703,7 +710,13 @@ headers = {
 
     try:
         print("CONTEXT:", context)
-        response = requests.post(url, headers=headers, json=data)
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=data,
+            timeout=30
+        )
 
         print("========== DEBUG ==========")
         print("STATUS:", response.status_code)
@@ -724,6 +737,7 @@ headers = {
         print("ERROR TYPE:", type(e).__name__)
         print("ERROR:", str(e))
         print("==============================")
+
         return f"خطا در ارتباط با AI: {str(e)}"
 def save_pending(question, answer):
     import sqlite3
