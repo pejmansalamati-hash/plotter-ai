@@ -738,12 +738,17 @@ def ask_ai(question, context):
     try:
         print("CONTEXT:", context)
 
+        print("DEBUG AI 1: BEFORE POST")
+
         response = requests.post(
-            url,
-            headers=headers,
-            json=data,
-            timeout=30
+        url,
+        headers=headers,
+        json=data,
+        timeout=30
         )
+
+        print("DEBUG AI 2: AFTER POST")
+        print("HTTP STATUS:", response.status_code)
 
         print("========== DEBUG ==========")
         print("STATUS:", response.status_code)
