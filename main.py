@@ -703,7 +703,7 @@ def ask_ai(question, context):
 
     url = "https://api.avalai.ir/v1/responses"
 
-    api_key = os.getenv("AVALAI_API_KEY")
+    api_key = os.getenv("aa-wt4O4OOlzOLG5OYhP7xiMpuVpsmTkqXsWYwDCx9OiXytrW2J")
 
     if not api_key:
         print("AVALAI_API_KEY NOT FOUND")
