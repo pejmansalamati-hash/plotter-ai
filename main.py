@@ -288,11 +288,19 @@ def ask_question(q: Question):
     # → AI
     # -----------------------------
 
+    print("DEBUG 1: BEFORE save_unknown")
+
     save_unknown(q.text)
+
+    print("DEBUG 2: AFTER save_unknown")
 
     context = get_all_approved()
 
+    print("DEBUG 3: AFTER get_all_approved")
+
     ai_answer = ask_ai(q.text, context)
+
+    print("DEBUG 4: AFTER ask_ai")
 
     if ai_answer != "NOT_FOUND":
         save_pending(q.text, ai_answer)
