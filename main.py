@@ -186,17 +186,36 @@ def concept_match_score(user_text, title, keywords):
 # جستجو در دیتابیس
 from search import search_solution
 # ذخیره سوال بدون جواب
+
 def save_unknown(question):
-    conn = get_db()
-    cursor = conn.cursor()
+    import traceback
 
-    cursor.execute("""
-        INSERT INTO unknown_questions (question)
-        VALUES (?)
-    """, (question,))
+    conn = None
 
-    conn.commit()
-    conn.close()
+    try:
+        print("DEBUG SAVE_UNKNOWN: opening database")
+        conn = get_db()
+        cursor = conn.cursor()
+
+        print("DEBUG SAVE_UNKNOWN: checking table")
+
+        cursor.execute("""
+            INSERT INTO unknown_questions (question)
+            VALUES (?)
+        """, (question,))
+
+        conn.commit()
+        print("DEBUG SAVE_UNKNOWN: saved successfully")
+
+    except Exception as e:
+        print("SAVE_UNKNOWN ERROR TYPE:", type(e).__name__)
+        print("SAVE_UNKNOWN ERROR:", repr(e))
+        traceback.print_exc()
+        raise
+
+    finally:
+        if conn is not None:
+            conn.close()
     
 # "/test-avalai"
 @app.get("/test-avalai")
