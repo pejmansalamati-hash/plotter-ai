@@ -2,6 +2,11 @@
   "port": 8000,
   "python": {
     "version": "3.12"
-     }
-
+  },
+  "disks": [
+    {
+      "name": "disk1",
+      "mountTo": "/data"
+    }
+  ]
 }
