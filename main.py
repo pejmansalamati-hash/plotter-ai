@@ -102,8 +102,27 @@ class Question(BaseModel):
     text: str
 
 # اتصال به دیتابیس
+
 def get_db():
-    conn = sqlite3.connect("errors.db")
+    import os
+    import shutil
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    source_db = os.path.join(base_dir, "errors.db")
+    persistent_db = "/data/errors.db"
+
+    # اگر دیتابیس روی دیسک پایدار وجود ندارد،
+    # نسخه فعلی را فقط یک بار به آنجا منتقل می‌کنیم.
+    if not os.path.exists(persistent_db):
+        if not os.path.exists(source_db):
+            raise FileNotFoundError(
+                f"فایل دیتابیس اولیه پیدا نشد: {source_db}"
+            )
+
+        shutil.copy2(source_db, persistent_db)
+        print("DATABASE COPIED TO PERSISTENT DISK")
+
+    conn = sqlite3.connect(persistent_db, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 def require_expert(request: Request):
