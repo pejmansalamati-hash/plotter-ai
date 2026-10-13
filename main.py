@@ -791,23 +791,22 @@ def ask_ai(question, context):
         print("==============================")
 
         return f"خطا در ارتباط با AI: {str(e)}"
+
 def save_pending(question, answer):
-    import sqlite3
-    import os
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, "errors.db")
+        cursor.execute("""
+            INSERT INTO pending_answers (question, ai_answer)
+            VALUES (?, ?)
+        """, (question, answer))
 
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+        conn.commit()
+        print("SAVE_PENDING: saved successfully")
 
-    cursor.execute("""
-        INSERT INTO pending_answers (question, ai_answer)
-        VALUES (?, ?)
-    """, (question, answer))
-
-    conn.commit()
-    conn.close()
+    finally:
+        conn.close()
 def get_all_approved():
     conn = get_db()
     cursor = conn.cursor()
