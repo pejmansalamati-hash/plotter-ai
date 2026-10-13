@@ -357,12 +357,27 @@ def get_pending(request: Request):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM pending_answers WHERE status = 0")
+    
+    cursor.execute("""
+        SELECT id, question, ai_answer, status
+        FROM pending_answers
+        WHERE status = 0
+    """)
     rows = cursor.fetchall()
+
+    data = [
+        {
+        "id": row["id"],
+        "question": row["question"],
+        "ai_answer": row["ai_answer"],
+        "status": row["status"]
+        }
+        for row in rows
+    ]
 
     conn.close()
 
-    return {"data": rows}
+    return {"data": data}
 
 
 @app.get("/admin/pending/{item_id}")
