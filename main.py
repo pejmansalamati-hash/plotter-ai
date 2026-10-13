@@ -69,8 +69,7 @@ def get_concepts(request: Request):
 
     require_expert(request)
 
-    conn = sqlite3.connect("errors.db")
-    conn.row_factory = sqlite3.Row
+     conn = get_db()
 
     rows = conn.execute("""
         SELECT DISTINCT concept
