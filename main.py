@@ -528,7 +528,7 @@ def add_knowledge(
     import json
     import sqlite3
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db()
     cursor = conn.cursor()
 
     try:
