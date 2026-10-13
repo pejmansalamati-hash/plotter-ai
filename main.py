@@ -69,7 +69,7 @@ def get_concepts(request: Request):
 
     require_expert(request)
 
-     conn = get_db()
+    conn = get_db()
 
     rows = conn.execute("""
         SELECT DISTINCT concept
