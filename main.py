@@ -766,17 +766,18 @@ def ask_ai(question, context):
         timeout=30
         )
 
-        print("DEBUG AI 2: AFTER POST")
-        print("HTTP STATUS:", response.status_code)
-
-        print("========== DEBUG ==========")
-        print("STATUS:", response.status_code)
-        print("RAW:", response.text)
-        print("===========================")
+        
+        print("DEBUG AI 3: BEFORE JSON PARSE")
 
         result = response.json()
 
+        print("DEBUG AI 4: AFTER JSON PARSE")
+        print("DEBUG AI 5: BEFORE EXTRACT")
+
         answer = extract_avalai_answer(result)
+
+        print("DEBUG AI 6: AFTER EXTRACT")
+        print("ANSWER EXISTS:", bool(answer))
 
         if not answer:
             return "NOT_FOUND"
