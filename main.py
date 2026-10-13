@@ -470,7 +470,7 @@ def approve(item_id: int, request: Request):
 
     print("ERROR_CONCEPTS COLUMNS:")
     for column in columns:
-    print(dict(column))
+        print(dict(column))
     
     # انتقال پاسخ نهایی به جدول errors
     cursor.execute("""
