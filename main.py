@@ -464,8 +464,13 @@ def approve(item_id: int, request: Request):
 
     question, answer = row
 
+    
     cursor.execute("PRAGMA table_info(error_concepts)")
-    print("ERROR_CONCEPTS COLUMNS:", cursor.fetchall())
+    columns = cursor.fetchall()
+
+    print("ERROR_CONCEPTS COLUMNS:")
+    for column in columns:
+    print(dict(column))
     
     # انتقال پاسخ نهایی به جدول errors
     cursor.execute("""
