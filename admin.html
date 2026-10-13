@@ -347,9 +347,9 @@ async function logout() {
 
         items.forEach(item => {
 
-            const id = item[0];
-            const question = item[1];
-            const answer = item[2];
+            const id = item.id;
+            const question = item.question;
+            const answer = item.ai_answer;
 
 
             html += `
