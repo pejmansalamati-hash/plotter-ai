@@ -441,65 +441,114 @@ def edit_pending(
         "id": item_id
     }
 @app.post("/admin/approve/{item_id}")
-def approve(item_id: int, request: Request):
 
+def approve(item_id: int, request: Request):
     require_expert(request)
 
-    # ادامه کد قبلی
     conn = get_db()
     cursor = conn.cursor()
 
-    # گرفتن آخرین نسخه پاسخ کارشناس
-    cursor.execute("""
-        SELECT question, ai_answer
-        FROM pending_answers
-        WHERE id = ? AND status = 0
-    """, (item_id,))
+    try:
+        # 1. دریافت سؤال و پاسخ در انتظار تأیید
+        cursor.execute("""
+            SELECT question, ai_answer
+            FROM pending_answers
+            WHERE id = ? AND status = 0
+        """, (item_id,))
 
-    row = cursor.fetchone()
+        row = cursor.fetchone()
 
-    if not row:
+        if not row:
+            return {
+                "error": "Pending item not found or already approved"
+            }
+
+        question = row["question"]
+        answer = row["ai_answer"]
+
+        # 2. ثبت پاسخ تأییدشده در جدول errors
+        cursor.execute("""
+            INSERT INTO errors
+            (plotter_type, connection, title, keywords, solution, approved)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            "نامشخص",
+            "نامشخص",
+            question,
+            question,
+            answer,
+            1
+        ))
+
+        # شناسه خطای تازه ثبت‌شده
+        error_id = cursor.lastrowid
+
+        # 3. تشخیص مفاهیم سؤال از جدول concepts
+        normalized_question = question.replace("\u200c", " ")
+        search_text = normalized_question.replace(" ", "")
+
+        cursor.execute("""
+            SELECT id, concept, synonym, weight, category
+            FROM concepts
+            WHERE active = 1
+            ORDER BY weight DESC
+        """)
+
+        concept_rows = cursor.fetchall()
+        detected_concept_ids = []
+        used_categories = set()
+
+        for concept_row in concept_rows:
+            synonym = concept_row["synonym"] or ""
+            synonym_text = synonym.replace("\u200c", " ").replace(" ", "")
+
+            if not synonym_text or synonym_text not in search_text:
+                continue
+
+            category = concept_row["category"]
+
+            # هماهنگ با رفتار فعلی detect_concepts:
+            # از هر دسته فقط یک مفهوم انتخاب می‌شود.
+            if category in used_categories:
+                continue
+
+            detected_concept_ids.append(concept_row["id"])
+            used_categories.add(category)
+
+        # 4. ثبت ارتباط خطای جدید با مفاهیم
+        for concept_id in detected_concept_ids:
+            cursor.execute("""
+                INSERT INTO error_concepts
+                (error_id, concept_id, weight)
+                VALUES (?, ?, ?)
+            """, (error_id, concept_id, 10))
+
+        # 5. تغییر وضعیت پاسخ در انتظار تأیید
+        cursor.execute("""
+            UPDATE pending_answers
+            SET status = 1
+            WHERE id = ? AND status = 0
+        """, (item_id,))
+
+        conn.commit()
+
+        print("APPROVED ERROR ID:", error_id)
+        print("LINKED CONCEPT IDS:", detected_concept_ids)
+
+        return {
+            "status": "approved",
+            "id": item_id,
+            "error_id": error_id,
+            "linked_concepts": len(detected_concept_ids)
+        }
+
+    except Exception as e:
+        conn.rollback()
+        print("APPROVE ERROR:", repr(e))
+        return {"error": str(e)}
+
+    finally:
         conn.close()
-        return {"error": "Pending item not found or already approved"}
-
-    question, answer = row
-
-    
-    cursor.execute("PRAGMA table_info(error_concepts)")
-    columns = cursor.fetchall()
-
-    print("ERROR_CONCEPTS COLUMNS:")
-    for column in columns:
-        print(dict(column))
-    
-    # انتقال پاسخ نهایی به جدول errors
-    cursor.execute("""
-        INSERT INTO errors
-        (plotter_type, connection, title, keywords, solution, approved)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        "نامشخص",
-        "نامشخص",
-        question,
-        question,
-        answer,
-        1
-    ))
-
-    # علامت‌گذاری Pending به عنوان تاییدشده
-    cursor.execute("""
-        UPDATE pending_answers
-        SET status = 1
-        WHERE id = ?
-    """, (item_id,))
-
-    conn.commit()
-    conn.close()
-
-    return {
-        "status": "approved",
-        "id": item_id
-    }
 @app.post("/admin/reject/{item_id}")
 def reject_pending(item_id: int, request: Request):
 
