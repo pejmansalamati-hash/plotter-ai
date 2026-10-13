@@ -514,28 +514,35 @@ async function saveAnswer(id) {
 }
 
 
-async function approveAnswer(id) {
 
-    const response =
-        await fetch(`/admin/approve/${id}`, {
+async function approveAnswer(id) {
+    try {
+        const response = await fetch(`/admin/approve/${id}`, {
             method: "POST"
         });
 
+        const result = await response.json();
 
-    if (!response.ok) {
+        console.log("APPROVE STATUS:", response.status);
+        console.log("APPROVE RESPONSE:", result);
 
-        alert("❌ تأیید انجام نشد");
+        if (!response.ok || result.error || result.status !== "approved") {
+            alert(
+                "❌ تأیید انجام نشد\n" +
+                "وضعیت سرور: " + response.status + "\n" +
+                "علت: " + (result.error || JSON.stringify(result))
+            );
+            return;
+        }
 
-        return;
+        alert("✅ پاسخ تأیید و به پایگاه دانش اضافه شد");
+        await loadPending();
+
+    } catch (error) {
+        console.error("APPROVE ERROR:", error);
+        alert("❌ خطا در ارتباط با سرور: " + error.message);
     }
-
-
-    alert("✅ پاسخ تأیید و به پایگاه دانش اضافه شد");
-
-    loadPending();
-
 }
-
 
 async function rejectAnswer(id) {
 
