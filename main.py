@@ -354,12 +354,7 @@ def get_pending(request: Request):
     require_expert(request)
 
     # ادامه کد قبلی بدون تغییر
-    import sqlite3, os
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, "errors.db")
-
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM pending_answers WHERE status = 0")
@@ -376,12 +371,7 @@ def get_pending_item(item_id: int, request: Request):
     require_expert(request)
 
     # ادامه کد قبلی
-    import sqlite3, os
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, "errors.db")
-
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -416,12 +406,7 @@ def edit_pending(
     require_expert(request)
 
     # ادامه کد قبلی
-    import sqlite3, os
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, "errors.db")
-
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -447,12 +432,7 @@ def approve(item_id: int, request: Request):
     require_expert(request)
 
     # ادامه کد قبلی
-    import sqlite3, os
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, "errors.db")
-
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cursor = conn.cursor()
 
     # گرفتن آخرین نسخه پاسخ کارشناس
@@ -504,9 +484,7 @@ def reject_pending(item_id: int, request: Request):
     require_expert(request)
 
     # ادامه کد قبلی
-    import sqlite3
-
-    conn = sqlite3.connect("errors.db")
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute(
