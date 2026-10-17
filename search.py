@@ -196,22 +196,45 @@ def detect_concepts(user_text):
 
     used_categories = set()
 
-    # نرمال‌سازی فقط برای مقایسه متنی
+    # ---------------------------------------------
+    # نرمال‌سازی متن
+    # ---------------------------------------------
+
     search_text = original_text.replace("\u200c", " ")
-    search_text = search_text.replace(" ", "")
+    search_text = " ".join(search_text.split())
+
+    # ---------------------------------------------
+    # تشخیص مفهوم
+    # ---------------------------------------------
 
     for row in rows:
 
-        # مهم:
-        # synonym را با normalize_concept تغییر نمی‌دهیم
         synonym = row["synonym"]
 
-        synonym_text = synonym.replace("\u200c", " ")
-        synonym_text = synonym_text.replace(" ", "")
+        if not synonym:
+            continue
 
-        matched = (
-            synonym_text in search_text
-        )
+        # نرمال‌سازی synonym بدون حذف فاصله بین کلمات
+        synonym_text = synonym.replace("\u200c", " ")
+        synonym_text = " ".join(synonym_text.split())
+
+        # -----------------------------------------
+        # اگر synonym چندکلمه‌ای است
+        # -----------------------------------------
+
+        if " " in synonym_text:
+
+            matched = synonym_text in search_text
+
+        # -----------------------------------------
+        # اگر synonym یک کلمه است
+        # -----------------------------------------
+
+        else:
+
+            words = search_text.split()
+
+            matched = synonym_text in words
 
         print(
             "CHECK:",
@@ -227,6 +250,7 @@ def detect_concepts(user_text):
 
         category = row["category"]
 
+        # از هر دسته فقط یک مفهوم
         if category in used_categories:
             continue
 
