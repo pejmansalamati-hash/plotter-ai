@@ -844,21 +844,56 @@ def ask_ai(question, context):
 
         return f"خطا در ارتباط با AI: {str(e)}"
 
-def save_pending(question, answer):
+
+def save_pending(question, answer, plotter_type, connection):
     conn = get_db()
+
     try:
         cursor = conn.cursor()
 
+        # بررسی ستون‌های موجود در جدول
+        cursor.execute("PRAGMA table_info(pending_answers)")
+        columns = [row["name"] for row in cursor.fetchall()]
+
+        # افزودن ستون نوع پلاتر، اگر وجود ندارد
+        if "plotter_type" not in columns:
+            cursor.execute("""
+                ALTER TABLE pending_answers
+                ADD COLUMN plotter_type TEXT DEFAULT 'نامشخص'
+            """)
+
+        # افزودن ستون نوع اتصال، اگر وجود ندارد
+        if "connection" not in columns:
+            cursor.execute("""
+                ALTER TABLE pending_answers
+                ADD COLUMN connection TEXT DEFAULT 'نامشخص'
+            """)
+
+        # ذخیره پرسش، پاسخ و اطلاعات زمینه‌ای
         cursor.execute("""
-            INSERT INTO pending_answers (question, ai_answer)
-            VALUES (?, ?)
-        """, (question, answer))
+            INSERT INTO pending_answers
+                (question, ai_answer, plotter_type, connection)
+            VALUES (?, ?, ?, ?)
+        """, (
+            question,
+            answer,
+            plotter_type or "نامشخص",
+            connection or "نامشخص"
+        ))
 
         conn.commit()
         print("SAVE_PENDING: saved successfully")
+        print("PENDING PLOTTER TYPE:", plotter_type)
+        print("PENDING CONNECTION:", connection)
+
+    except Exception as e:
+        conn.rollback()
+        print("SAVE_PENDING ERROR:", repr(e))
+        raise
 
     finally:
         conn.close()
+
 def get_all_approved():
     conn = get_db()
     cursor = conn.cursor()
