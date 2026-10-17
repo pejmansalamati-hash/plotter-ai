@@ -331,9 +331,11 @@ def ask_question(q: Question):
 
     print("DEBUG 2: AFTER save_unknown")
 
-    context = get_all_approved()
+    # چون پاسخ مرتبطی در DB پیدا نشده،
+    # زمینه نامرتبط به AI ارسال نمی‌کنیم.
+    context = ""
 
-    print("DEBUG 3: AFTER get_all_approved")
+    print("DEBUG 3: EMPTY CONTEXT - ROUTING TO AI")
 
     ai_answer = ask_ai(q.text, context)
 
@@ -347,6 +349,7 @@ def ask_question(q: Question):
         "answer": ai_answer,
         "source": "ai"
     }
+
 @app.get("/admin/pending")
 def get_pending(request: Request):
 
