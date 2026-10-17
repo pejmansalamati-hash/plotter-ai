@@ -522,12 +522,13 @@ def load_error_rows(plotter_type, connection):
 # SEARCH SOLUTION
 # =====================================================
 
+
 def search_solution(user_text, plotter_type, connection):
 
     print("🔥 SEARCH_SOLUTION RUNNING")
 
     # ------------------------------------
-    # Detect Concepts
+    # 1. Detect Concepts
     # ------------------------------------
 
     detected_concepts = detect_concepts(user_text)
@@ -538,7 +539,6 @@ def search_solution(user_text, plotter_type, connection):
     detected_codes = set()
 
     for item in detected_concepts:
-
         print(
             f"➡️ {item['concept']} | "
             f"weight={item['weight']} | "
@@ -550,48 +550,48 @@ def search_solution(user_text, plotter_type, connection):
     print("=" * 35)
 
     # ------------------------------------
-    # Load Database
+    # 2. No Concept = Send Directly to AI
+    # ------------------------------------
+
+    if not detected_codes:
+        print("⚠️ NO CONCEPT FOUND - ROUTING TO AI")
+        return {"type": "ai"}
+
+    # ------------------------------------
+    # 3. Load Database
     # ------------------------------------
 
     rows = load_error_rows(
         plotter_type,
         connection
     )
+
     print("PLOTTER_TYPE FROM ASK:", plotter_type)
     print("CONNECTION FROM ASK:", connection)
     print("ROWS LOADED:", len(rows))
 
     if not rows:
+        print("⚠️ NO DATABASE ROWS - ROUTING TO AI")
         return {"type": "ai"}
 
     results = {}
 
     # ------------------------------------
-    # Score
+    # 4. Score
     # ------------------------------------
 
     for row in rows:
 
         score = calculate_score(
-
             user_text,
-
             row["title"],
-
             row["concept"],
-
             row["synonym"],
-
             row["relation_weight"]
-
         )
 
-        # -------------------------------
         # Concept Bonus
-        # -------------------------------
-
         if row["concept"] in detected_codes:
-
             score += 25
 
         print(
@@ -604,32 +604,28 @@ def search_solution(user_text, plotter_type, connection):
         error_id = row["error_id"]
 
         if error_id not in results:
-
             results[error_id] = {
-
                 "title": row["title"],
-
                 "solution": row["solution"],
-
                 "score": 0
-
             }
 
         results[error_id]["score"] += score
 
     # ------------------------------------
-    # Ranking
+    # 5. Ranking
     # ------------------------------------
 
     results = list(results.values())
+
+    if not results:
+        print("⚠️ NO RESULTS - ROUTING TO AI")
+        return {"type": "ai"}
 
     results.sort(
         key=lambda x: x["score"],
         reverse=True
     )
-
-    if not results:
-        return {"type": "ai"}
 
     top1 = results[0]
 
@@ -649,7 +645,15 @@ def search_solution(user_text, plotter_type, connection):
     print("=" * 35)
 
     # ------------------------------------
-    # Decision
+    # 6. Reject Zero or Negative Scores
+    # ------------------------------------
+
+    if score1 <= 0:
+        print("❌ NO POSITIVE MATCH - ROUTING TO AI")
+        return {"type": "ai"}
+
+    # ------------------------------------
+    # 7. Decision
     # ------------------------------------
 
     if score1 >= 30 and (score1 - score2) >= 8:
@@ -657,11 +661,8 @@ def search_solution(user_text, plotter_type, connection):
         print("✅ HIGH CONFIDENCE")
 
         return {
-
             "type": "db",
-
             "data": top1
-
         }
 
     elif score1 >= 18:
@@ -669,19 +670,11 @@ def search_solution(user_text, plotter_type, connection):
         print("⚠️ MEDIUM CONFIDENCE")
 
         return {
-
             "type": "hybrid",
-
             "data": top1
-
         }
 
     else:
 
         print("❌ LOW CONFIDENCE")
-
-        return {
-
-            "type": "ai"
-
-        }
+        return {"type": "ai"}
