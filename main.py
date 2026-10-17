@@ -2,6 +2,7 @@
 from fastapi import FastAPI, Form, Request, HTTPException
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
+from search import detect_concepts
 import sqlite3
 DB_NAME = "errors.db"
 app = FastAPI()
@@ -451,6 +452,7 @@ def edit_pending(
 @app.post("/admin/approve/{item_id}")
 
 
+
 def approve(item_id: int, request: Request):
     require_expert(request)
 
@@ -458,7 +460,7 @@ def approve(item_id: int, request: Request):
     cursor = conn.cursor()
 
     try:
-        # 1. دریافت سؤال، پاسخ، نوع پلاتر و نوع اتصال
+        # 1. دریافت سؤال، پاسخ، نوع پلاتر و اتصال
         cursor.execute("""
             SELECT question, ai_answer, plotter_type, connection
             FROM pending_answers
@@ -477,7 +479,7 @@ def approve(item_id: int, request: Request):
         plotter_type = row["plotter_type"] or "نامشخص"
         connection = row["connection"] or "نامشخص"
 
-        # 2. ثبت پاسخ تأییدشده با نوع پلاتر و اتصال واقعی
+        # 2. ثبت پاسخ تأییدشده
         cursor.execute("""
             INSERT INTO errors
             (plotter_type, connection, title, keywords, solution, approved)
@@ -493,45 +495,41 @@ def approve(item_id: int, request: Request):
 
         error_id = cursor.lastrowid
 
-        # 3. تشخیص مفاهیم سؤال از جدول concepts
-        normalized_question = question.replace("\u200c", " ")
-        search_text = normalized_question.replace(" ", "")
+        # 3. استفاده از همان تشخیص مفاهیم جست‌وجو
+        detected_concepts = detect_concepts(question)
 
-        cursor.execute("""
-            SELECT id, concept, synonym, weight, category
-            FROM concepts
-            WHERE active = 1
-            ORDER BY weight DESC
-        """)
+        detected_codes = [
+            item["concept"] for item in detected_concepts
+        ]
 
-        concept_rows = cursor.fetchall()
-        detected_concept_ids = []
-        used_categories = set()
+        print("APPROVE DETECTED CONCEPTS:", detected_codes)
 
-        for concept_row in concept_rows:
-            synonym = concept_row["synonym"] or ""
-            synonym_text = synonym.replace("\u200c", " ").replace(" ", "")
+        # 4. تبدیل کد مفاهیم به شناسه‌های جدول concepts
+        concept_ids = []
 
-            if not synonym_text or synonym_text not in search_text:
-                continue
+        for concept_code in detected_codes:
+            cursor.execute("""
+                SELECT id
+                FROM concepts
+                WHERE concept = ?
+                  AND active = 1
+                LIMIT 1
+            """, (concept_code,))
 
-            category = concept_row["category"]
+            concept_row = cursor.fetchone()
 
-            if category in used_categories:
-                continue
+            if concept_row:
+                concept_ids.append(concept_row["id"])
 
-            detected_concept_ids.append(concept_row["id"])
-            used_categories.add(category)
-
-        # 4. ثبت ارتباط خطای جدید با مفاهیم
-        for concept_id in detected_concept_ids:
+        # 5. ثبت ارتباط با مفاهیم
+        for concept_id in concept_ids:
             cursor.execute("""
                 INSERT INTO error_concepts
                 (error_id, concept_id, weight)
                 VALUES (?, ?, ?)
             """, (error_id, concept_id, 10))
 
-        # 5. تغییر وضعیت پاسخ در انتظار تأیید
+        # 6. تغییر وضعیت پاسخ
         cursor.execute("""
             UPDATE pending_answers
             SET status = 1
@@ -543,7 +541,7 @@ def approve(item_id: int, request: Request):
         print("APPROVED ERROR ID:", error_id)
         print("APPROVED PLOTTER TYPE:", plotter_type)
         print("APPROVED CONNECTION:", connection)
-        print("LINKED CONCEPT IDS:", detected_concept_ids)
+        print("LINKED CONCEPT IDS:", concept_ids)
 
         return {
             "status": "approved",
@@ -551,7 +549,7 @@ def approve(item_id: int, request: Request):
             "error_id": error_id,
             "plotter_type": plotter_type,
             "connection": connection,
-            "linked_concepts": len(detected_concept_ids)
+            "linked_concepts": len(concept_ids)
         }
 
     except Exception as e:
