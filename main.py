@@ -342,12 +342,12 @@ def ask_question(q: Question):
     print("DEBUG 4: AFTER ask_ai")
 
     if ai_answer != "NOT_FOUND":
-    save_pending(
-        q.text,
-        ai_answer,
-        q.plotter_type,
-        q.connection
-    )
+        save_pending(
+            q.text,
+            ai_answer,
+            q.plotter_type,
+            q.connection
+        )
 
     return {
         "status": "ai_answer",
