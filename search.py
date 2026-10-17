@@ -170,12 +170,20 @@ def get_important_words(text):
 
 def detect_concepts(user_text):
 
+    # =============================================
+    # NORMALIZE USER TEXT
+    # =============================================
+
     text = normalize_concept(user_text)
 
     # برای جستجوی synonym، متن اصلی را نگه می‌داریم
     original_text = user_text
 
     detected = []
+
+    # =============================================
+    # LOAD CONCEPTS
+    # =============================================
 
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
@@ -194,18 +202,42 @@ def detect_concepts(user_text):
 
     conn.close()
 
+    # از هر category فقط یک مفهوم
     used_categories = set()
 
-    # ---------------------------------------------
-    # نرمال‌سازی متن
-    # ---------------------------------------------
+    # =============================================
+    # NORMALIZE FOR MATCHING
+    # =============================================
 
-    search_text = original_text.replace("\u200c", " ")
-    search_text = " ".join(search_text.split())
+    def normalize_match(value):
 
-    # ---------------------------------------------
-    # تشخیص مفهوم
-    # ---------------------------------------------
+        if not value:
+            return ""
+
+        value = str(value)
+
+        # تبدیل نیم‌فاصله به فاصله
+        value = value.replace("\u200c", " ")
+
+        # یکسان‌سازی فاصله‌ها
+        value = " ".join(value.split())
+
+        # یکسان‌سازی شکل‌های مختلف «می»
+        value = value.replace("می ", "می")
+
+        # یکسان‌سازی شکل‌های مختلف «نمی»
+        value = value.replace("نمی ", "نمی")
+
+        # حذف فاصله برای ساخت نسخه دوم
+        compact = value.replace(" ", "")
+
+        return value, compact
+
+    search_normalized, search_compact = normalize_match(original_text)
+
+    # =============================================
+    # CHECK CONCEPTS
+    # =============================================
 
     for row in rows:
 
@@ -214,27 +246,77 @@ def detect_concepts(user_text):
         if not synonym:
             continue
 
-        # نرمال‌سازی synonym بدون حذف فاصله بین کلمات
-        synonym_text = synonym.replace("\u200c", " ")
-        synonym_text = " ".join(synonym_text.split())
+        synonym_normalized, synonym_compact = normalize_match(
+            synonym
+        )
 
-        # -----------------------------------------
-        # اگر synonym چندکلمه‌ای است
-        # -----------------------------------------
+        matched = False
 
-        if " " in synonym_text:
+        # =========================================
+        # MULTI-WORD SYNONYM
+        # =========================================
 
-            matched = synonym_text in search_text
+        if " " in synonym_normalized:
 
-        # -----------------------------------------
-        # اگر synonym یک کلمه است
-        # -----------------------------------------
+            # مثال:
+            # صدای تق تق
+            # چاپ نمی کند
+            # روشن نمی شود
+
+            if synonym_normalized in search_normalized:
+                matched = True
+
+            # نسخه بدون فاصله
+            elif synonym_compact in search_compact:
+                matched = True
+
+        # =========================================
+        # SINGLE-WORD SYNONYM
+        # =========================================
 
         else:
 
-            words = search_text.split()
+            # کلمات متن را جدا می‌کنیم
+            words = search_normalized.split()
 
-            matched = synonym_text in words
+            # -----------------------------------------
+            # حالت عادی
+            # -----------------------------------------
+
+            if synonym_normalized in words:
+                matched = True
+
+            # -----------------------------------------
+            # جلوگیری از false match
+            #
+            # مثال:
+            # synonym = کند
+            #
+            # نباید در:
+            # نمی‌کند
+            #
+            # پیدا شود.
+            # -----------------------------------------
+
+            if synonym_normalized == "کند":
+
+                blocked_words = {
+                    "نمی‌کند",
+                    "نمی کند",
+                    "نمیکند",
+                    "نمی‌كند",
+                    "نمی كند"
+                }
+
+                for blocked in blocked_words:
+
+                    if blocked in original_text:
+                        matched = False
+                        break
+
+        # =========================================
+        # DEBUG
+        # =========================================
 
         print(
             "CHECK:",
@@ -250,7 +332,10 @@ def detect_concepts(user_text):
 
         category = row["category"]
 
-        # از هر دسته فقط یک مفهوم
+        # =========================================
+        # ONE CONCEPT PER CATEGORY
+        # =========================================
+
         if category in used_categories:
             continue
 
