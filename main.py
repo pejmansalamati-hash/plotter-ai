@@ -450,6 +450,7 @@ def edit_pending(
     }
 @app.post("/admin/approve/{item_id}")
 
+
 def approve(item_id: int, request: Request):
     require_expert(request)
 
@@ -457,9 +458,9 @@ def approve(item_id: int, request: Request):
     cursor = conn.cursor()
 
     try:
-        # 1. دریافت سؤال و پاسخ در انتظار تأیید
+        # 1. دریافت سؤال، پاسخ، نوع پلاتر و نوع اتصال
         cursor.execute("""
-            SELECT question, ai_answer
+            SELECT question, ai_answer, plotter_type, connection
             FROM pending_answers
             WHERE id = ? AND status = 0
         """, (item_id,))
@@ -473,22 +474,23 @@ def approve(item_id: int, request: Request):
 
         question = row["question"]
         answer = row["ai_answer"]
+        plotter_type = row["plotter_type"] or "نامشخص"
+        connection = row["connection"] or "نامشخص"
 
-        # 2. ثبت پاسخ تأییدشده در جدول errors
+        # 2. ثبت پاسخ تأییدشده با نوع پلاتر و اتصال واقعی
         cursor.execute("""
             INSERT INTO errors
             (plotter_type, connection, title, keywords, solution, approved)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
-            "نامشخص",
-            "نامشخص",
+            plotter_type,
+            connection,
             question,
             question,
             answer,
             1
         ))
 
-        # شناسه خطای تازه ثبت‌شده
         error_id = cursor.lastrowid
 
         # 3. تشخیص مفاهیم سؤال از جدول concepts
@@ -515,8 +517,6 @@ def approve(item_id: int, request: Request):
 
             category = concept_row["category"]
 
-            # هماهنگ با رفتار فعلی detect_concepts:
-            # از هر دسته فقط یک مفهوم انتخاب می‌شود.
             if category in used_categories:
                 continue
 
@@ -541,12 +541,16 @@ def approve(item_id: int, request: Request):
         conn.commit()
 
         print("APPROVED ERROR ID:", error_id)
+        print("APPROVED PLOTTER TYPE:", plotter_type)
+        print("APPROVED CONNECTION:", connection)
         print("LINKED CONCEPT IDS:", detected_concept_ids)
 
         return {
             "status": "approved",
             "id": item_id,
             "error_id": error_id,
+            "plotter_type": plotter_type,
+            "connection": connection,
             "linked_concepts": len(detected_concept_ids)
         }
 
@@ -557,6 +561,7 @@ def approve(item_id: int, request: Request):
 
     finally:
         conn.close()
+
 @app.post("/admin/reject/{item_id}")
 def reject_pending(item_id: int, request: Request):
 
