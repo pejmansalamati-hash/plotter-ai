@@ -458,6 +458,7 @@ def edit_pending(
 
 
 
+
 def approve(item_id: int, request: Request):
     require_expert(request)
 
@@ -465,7 +466,7 @@ def approve(item_id: int, request: Request):
     cursor = conn.cursor()
 
     try:
-        # 1. دریافت سؤال، پاسخ، نوع پلاتر و اتصال
+        # 1. دریافت سؤال، پاسخ و مشخصات دستگاه
         cursor.execute("""
             SELECT question, ai_answer, plotter_type, connection
             FROM pending_answers
@@ -484,10 +485,10 @@ def approve(item_id: int, request: Request):
         plotter_type = row["plotter_type"] or "نامشخص"
         connection = row["connection"] or "نامشخص"
 
-        # 2. ثبت پاسخ تأییدشده
+        # 2. ذخیره پاسخ تأییدشده در پایگاه دانش
         cursor.execute("""
             INSERT INTO errors
-            (plotter_type, connection, title, keywords, solution, approved)
+                (plotter_type, connection, title, keywords, solution, approved)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
             plotter_type,
@@ -500,16 +501,16 @@ def approve(item_id: int, request: Request):
 
         error_id = cursor.lastrowid
 
-        # 3. استفاده از همان تشخیص مفاهیم جست‌وجو
+        # 3. شناسایی مفهوم با الگوریتم فعلی
         detected_concepts = detect_concepts(question)
-
         detected_codes = [
             item["concept"] for item in detected_concepts
         ]
 
+        print("APPROVE QUESTION:", repr(question))
         print("APPROVE DETECTED CONCEPTS:", detected_codes)
 
-        # 4. تبدیل کد مفاهیم به شناسه‌های جدول concepts
+        # 4. اتصال رکورد به مفهوم‌های موجود
         concept_ids = []
 
         for concept_code in detected_codes:
@@ -526,21 +527,24 @@ def approve(item_id: int, request: Request):
             if concept_row:
                 concept_ids.append(concept_row["id"])
 
-        # 5. ثبت ارتباط با مفاهیم
         for concept_id in concept_ids:
             cursor.execute("""
                 INSERT INTO error_concepts
-                (error_id, concept_id, weight)
+                    (error_id, concept_id, weight)
                 VALUES (?, ?, ?)
             """, (error_id, concept_id, 10))
 
-        # 6. تغییر وضعیت پاسخ
+        # 5. علامت‌گذاری سؤال به‌عنوان تأییدشده
         cursor.execute("""
             UPDATE pending_answers
             SET status = 1
             WHERE id = ? AND status = 0
         """, (item_id,))
 
+        if cursor.rowcount != 1:
+            raise Exception("Pending item status could not be updated")
+
+        # 6. ثبت همه تغییرات
         conn.commit()
 
         print("APPROVED ERROR ID:", error_id)
@@ -564,6 +568,7 @@ def approve(item_id: int, request: Request):
 
     finally:
         conn.close()
+
 
 @app.post("/admin/reject/{item_id}")
 def reject_pending(item_id: int, request: Request):
