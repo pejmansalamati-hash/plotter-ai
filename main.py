@@ -338,7 +338,12 @@ def ask_question(q: Question):
 
     print("DEBUG 3: EMPTY CONTEXT - ROUTING TO AI")
 
-    ai_answer = ask_ai(q.text, context)
+    ai_answer = ask_ai(
+    q.text,
+    context,
+    q.plotter_type,
+    q.connection
+)
 
     print("DEBUG 4: AFTER ask_ai")
 
@@ -774,7 +779,7 @@ def extract_avalai_answer(result):
 
     except Exception:
         return None
-def ask_ai(question, context):
+def ask_ai(question, context, plotter_type, connection):
     import requests
     import os
 
@@ -794,19 +799,40 @@ def ask_ai(question, context):
     }
 
     prompt = f"""
-اگر پاسخ در اطلاعات زیر وجود دارد، از همان استفاده کن.
+شما دستیار عیب‌یابی پلاتر هستید.
 
-اگر وجود ندارد:
-ابتدا راه‌حل‌های ساده و رایج را پیشنهاد بده (مثل برق، کابل، تنظیمات).
-اگر واقعاً هیچ راه‌حلی نمی‌دانی، بگو: نیاز به بررسی بیشتر دارد.
+مشخصات دستگاه:
+نوع پلاتر: {plotter_type}
+نوع اتصال: {connection}
 
-پاسخ کوتاه و کاربردی باشد.
-
-اطلاعات:
-{context}
-
-سوال:
+سوال کاربر:
 {question}
+
+قوانین مهم:
+
+1. پاسخ را فقط بر اساس نوع پلاتر و نوع اتصال انتخاب‌شده توسط کاربر تنظیم کن.
+
+2. نوع پلاتر و نوع اتصال را نادیده نگیر.
+
+3. اگر نوع اتصال «شبکه» است، راه‌حل‌های مربوط به USB را به عنوان راه‌حل اصلی پیشنهاد نده.
+
+4. اگر نوع اتصال «USB» است، راه‌حل‌های مربوط به شبکه را به عنوان راه‌حل اصلی پیشنهاد نده.
+
+5. اگر نوع پلاتر «جوهری» است، پاسخ را متناسب با پلاتر جوهری بده.
+
+6. اگر نوع پلاتر «قلمی» است، پاسخ را متناسب با پلاتر قلمی بده.
+
+7. اگر اطلاعات کافی برای تشخیص علت وجود ندارد، چند بررسی ساده و مرتبط با همین نوع پلاتر و اتصال پیشنهاد بده.
+
+8. اگر پاسخ در اطلاعات پایگاه دانش وجود دارد، از همان اطلاعات استفاده کن.
+
+9. پاسخ کوتاه، عملی و مرحله‌به‌مرحله باشد.
+
+10. اگر واقعاً هیچ راه‌حلی نمی‌دانی، بگو:
+نیاز به بررسی بیشتر دارد.
+
+اطلاعات پایگاه دانش:
+{context}
 """
 
     data = {
@@ -815,18 +841,19 @@ def ask_ai(question, context):
     }
 
     try:
+        print("PLOTTER TYPE:", plotter_type)
+        print("CONNECTION:", connection)
         print("CONTEXT:", context)
 
         print("DEBUG AI 1: BEFORE POST")
 
         response = requests.post(
-        url,
-        headers=headers,
-        json=data,
-        timeout=30
+            url,
+            headers=headers,
+            json=data,
+            timeout=30
         )
 
-        
         print("DEBUG AI 3: BEFORE JSON PARSE")
 
         result = response.json()
