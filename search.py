@@ -546,10 +546,7 @@ def search_solution(user_text, plotter_type, connection):
     # 2. No Concept = Send Directly to AI
     # ------------------------------------
 
-    if not detected_codes:
-        print("⚠️ NO CONCEPT FOUND - ROUTING TO AI")
-        return {"type": "ai"}
-
+    
     # ------------------------------------
     # 3. Load Database
     # ------------------------------------
