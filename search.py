@@ -439,85 +439,78 @@ def calculate_score(
 # LOAD ERROR ROWS
 # =====================================================
 
+
 def load_error_rows(plotter_type, connection):
 
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
-    print("DB FILE:", DB_NAME)
 
-    cursor = conn.cursor()
+    try:
+        print("DB FILE:", DB_NAME)
 
-    cursor.execute("SELECT COUNT(*) FROM errors")
-    print("ERRORS:", cursor.fetchone()[0])
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM concepts")
-    print("CONCEPTS:", cursor.fetchone()[0])
+        cursor.execute("SELECT COUNT(*) FROM errors")
+        print("ERRORS:", cursor.fetchone()[0])
 
-    cursor.execute("SELECT COUNT(*) FROM error_concepts")
-    print("ERROR_CONCEPTS:", cursor.fetchone()[0])
-    
-    rows = conn.execute("""
+        cursor.execute("SELECT COUNT(*) FROM concepts")
+        print("CONCEPTS:", cursor.fetchone()[0])
 
-        SELECT
+        cursor.execute("SELECT COUNT(*) FROM error_concepts")
+        print("ERROR_CONCEPTS:", cursor.fetchone()[0])
 
-            e.id AS error_id,
+        rows = conn.execute("""
+            SELECT
+                e.id AS error_id,
+                e.title,
+                e.solution,
+                c.concept,
+                c.synonym,
+                c.weight,
+                c.category,
+                ec.weight AS relation_weight
 
-            e.title,
+            FROM errors e
 
-            e.solution,
+            LEFT JOIN error_concepts ec
+                ON ec.error_id = e.id
 
-            c.concept,
+            LEFT JOIN concepts c
+                ON c.id = ec.concept_id
+                AND c.active = 1
 
-            c.synonym,
+            WHERE
+                e.approved = 1
 
-            c.weight,
+                AND (
+                    e.plotter_type = ?
+                    OR e.plotter_type = 'نامشخص'
+                )
 
-            c.category,
+                AND (
+                    e.connection = ?
+                    OR e.connection = 'نامشخص'
+                )
 
-            ec.weight AS relation_weight
+            ORDER BY e.id
+        """, (plotter_type, connection)).fetchall()
 
-        FROM errors e
+        print("ROWS LOADED:", len(rows))
 
-        JOIN error_concepts ec
-             ON ec.error_id = e.id
-
-        JOIN concepts c
-             ON c.id = ec.concept_id
-
-        WHERE
-            e.approved = 1
-
-        AND
-            (
-                e.plotter_type = ?
-                OR e.plotter_type = 'نامشخص'
+        for r in rows:
+            print(
+                r["error_id"],
+                r["title"],
+                r["concept"],
+                r["synonym"],
+                r["relation_weight"]
             )
 
-        AND
-            (
-                e.connection = ?
-                OR e.connection = 'نامشخص'
-            )
+        return rows
 
-        AND
-            c.active = 1
+    finally:
+        conn.close()
 
-    """, (plotter_type, connection)).fetchall()
-
-    print("ROWS LOADED:", len(rows))
-
-    for r in rows:
-        print(
-            r["error_id"],
-            r["title"],
-            r["concept"],
-            r["synonym"],
-            r["relation_weight"]
-        )
-
-    conn.close()
-
-    return rows
 # =====================================================
 # SEARCH SOLUTION
 # =====================================================
