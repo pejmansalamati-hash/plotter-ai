@@ -426,6 +426,7 @@ def calculate_score(
     common = user_words & synonym_words
     print("COMMON =", common)
 
+    relation_weight = relation_weight or 0
     score += len(common) * relation_weight
     
     print("USER:", user_text)
