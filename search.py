@@ -381,6 +381,7 @@ test_detect_concepts()
 # CALCULATE SCORE (V2.3)
 # =====================================================
 
+
 def calculate_score(
     user_text,
     title,
@@ -388,54 +389,47 @@ def calculate_score(
     synonym,
     relation_weight
 ):
-    
-    user_text = normalize(user_text)
-
-    title = normalize(title)
-
-    concept = normalize(concept)
-
-    synonym = normalize(synonym)
+    user_text = normalize(user_text or "")
+    title = normalize(title or "")
+    concept = normalize(concept or "")
+    synonym = normalize(synonym or "")
 
     user_words = get_important_words(user_text)
+    title_words = get_important_words(title)
+    synonym_words = get_important_words(synonym)
 
     score = 0
 
-    # -----------------------------------
-    # Title
-    # -----------------------------------
-
-    title_words = get_important_words(title)
-
-    common = user_words & title_words
-
-    score += len(common) * 5
-
+    # 1. Exact title match
     if title == user_text:
-        score += 20
-
+        score += 30
     elif title.replace(" ", "") == user_text.replace(" ", ""):
-        score += 18
+        score += 25
 
-    # -----------------------------------
-    # Synonym
-    # -----------------------------------
+    # 2. Title word overlap
+    common_title = user_words & title_words
+    score += len(common_title) * 5
 
-    synonym_words = get_important_words(synonym)
+    # 3. Reward matching the more informative title words
+    if title_words:
+        title_coverage = len(common_title) / len(title_words)
+        score += int(title_coverage * 15)
 
-    common = user_words & synonym_words
-    print("COMMON =", common)
-
+    # 4. Concept synonym match
+    common_synonym = user_words & synonym_words
     relation_weight = relation_weight or 0
-    score += len(common) * relation_weight
-    
+    score += len(common_synonym) * relation_weight
+
     print("USER:", user_text)
     print("TITLE:", title)
     print("CONCEPT:", concept)
-    print("SYNONYM:", synonym)
+    print("COMMON TITLE:", common_title)
+    print("COMMON SYNONYM:", common_synonym)
     print("REL_WEIGHT:", relation_weight)
     print("FINAL SCORE:", score)
+
     return score
+
 # =====================================================
 # LOAD ERROR ROWS
 # =====================================================
