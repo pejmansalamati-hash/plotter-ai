@@ -591,7 +591,203 @@ def reject_pending(item_id: int, request: Request):
         "status": "rejected",
         "id": item_id
     }
+ # ============================================================
+# مدیریت پایگاه دانش شرکت
+# ============================================================
+
+@app.get("/admin/errors")
+def get_errors(request: Request):
+
+    require_expert(request)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+            SELECT
+                id,
+                plotter_type,
+                connection,
+                title,
+                keywords,
+                solution,
+                approved
+            FROM errors
+            ORDER BY id DESC
+        """)
+
+        rows = cursor.fetchall()
+
+        data = []
+
+        for row in rows:
+
+            data.append({
+                "id": row["id"],
+                "plotter_type": row["plotter_type"],
+                "connection": row["connection"],
+                "title": row["title"],
+                "keywords": row["keywords"],
+                "solution": row["solution"],
+                "approved": row["approved"]
+            })
+
+        return {
+            "status": "ok",
+            "data": data
+        }
+
+    except Exception as e:
+
+        print("❌ GET ERRORS ERROR:", repr(e))
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+
+        conn.close()
+
+
+class EditKnowledge(BaseModel):
+
+    plotter_type: str
+    connection: str
+    title: str
+    keywords: str
+    solution: str
+
+
+@app.put("/admin/errors/{error_id}")
+def edit_error(
+    error_id: int,
+    data: EditKnowledge,
+    request: Request
+):
+
+    require_expert(request)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+            UPDATE errors
+            SET
+                plotter_type = ?,
+                connection = ?,
+                title = ?,
+                keywords = ?,
+                solution = ?
+            WHERE id = ?
+        """, (
+            data.plotter_type,
+            data.connection,
+            data.title,
+            data.keywords,
+            data.solution,
+            error_id
+        ))
+
+        if cursor.rowcount == 0:
+
+            return {
+                "status": "error",
+                "message": "رکورد موردنظر پیدا نشد."
+            }
+
+        conn.commit()
+
+        print("🔥 KNOWLEDGE UPDATED:", error_id)
+
+        return {
+            "status": "updated",
+            "id": error_id
+        }
+
+    except Exception as e:
+
+        conn.rollback()
+
+        print("❌ EDIT ERROR:", repr(e))
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+
+        conn.close()
+
+
+@app.delete("/admin/errors/{error_id}")
+def delete_error(
+    error_id: int,
+    request: Request
+):
+
+    require_expert(request)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+
+        # ابتدا Relationهای مربوط به این Error را حذف می‌کنیم
+        cursor.execute("""
+            DELETE FROM error_concepts
+            WHERE error_id = ?
+        """, (error_id,))
+
+        deleted_relations = cursor.rowcount
+
+        # سپس خود Error را حذف می‌کنیم
+        cursor.execute("""
+            DELETE FROM errors
+            WHERE id = ?
+        """, (error_id,))
+
+        if cursor.rowcount == 0:
+
+            conn.rollback()
+
+            return {
+                "status": "error",
+                "message": "رکورد موردنظر پیدا نشد."
+            }
+
+        conn.commit()
+
+        print("🔥 KNOWLEDGE DELETED:", error_id)
+        print("DELETED RELATIONS:", deleted_relations)
+
+        return {
+            "status": "deleted",
+            "id": error_id
+        }
+
+    except Exception as e:
+
+        conn.rollback()
+
+        print("❌ DELETE ERROR:", repr(e))
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+
+        conn.close()   
 @app.post("/admin/knowledge")
+
 def add_knowledge(
     request: Request,
     plotter_type: str = Form(...),
