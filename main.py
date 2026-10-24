@@ -786,6 +786,136 @@ def delete_error(
     finally:
 
         conn.close()   
+@app.put("/admin/errors/{error_id}")
+def edit_error(
+    error_id: int,
+    request: Request,
+    data: dict
+):
+
+    require_expert(request)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+
+        # بررسی وجود رکورد
+        cursor.execute("""
+            SELECT id
+            FROM errors
+            WHERE id = ?
+        """, (error_id,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            return {
+                "status": "error",
+                "message": "رکورد پیدا نشد"
+            }
+
+        # ویرایش اطلاعات
+        cursor.execute("""
+            UPDATE errors
+            SET
+                plotter_type = ?,
+                connection = ?,
+                title = ?,
+                keywords = ?,
+                solution = ?
+            WHERE id = ?
+        """, (
+            data.get("plotter_type"),
+            data.get("connection"),
+            data.get("title"),
+            data.get("keywords"),
+            data.get("solution"),
+            error_id
+        ))
+
+        conn.commit()
+
+        print("🔥 ERROR UPDATED:", error_id)
+
+        return {
+            "status": "updated",
+            "id": error_id
+        }
+
+    except Exception as e:
+
+        conn.rollback()
+
+        print("❌ ERROR UPDATE:", repr(e))
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+
+        conn.close()
+
+
+@app.delete("/admin/errors/{error_id}")
+def delete_error(
+    error_id: int,
+    request: Request
+):
+
+    require_expert(request)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+
+        # ابتدا Relationهای مربوط به رکورد را حذف می‌کنیم
+        cursor.execute("""
+            DELETE FROM error_concepts
+            WHERE error_id = ?
+        """, (error_id,))
+
+        # سپس خود رکورد را حذف می‌کنیم
+        cursor.execute("""
+            DELETE FROM errors
+            WHERE id = ?
+        """, (error_id,))
+
+        if cursor.rowcount == 0:
+
+            conn.rollback()
+
+            return {
+                "status": "error",
+                "message": "رکورد پیدا نشد"
+            }
+
+        conn.commit()
+
+        print("🗑️ ERROR DELETED:", error_id)
+
+        return {
+            "status": "deleted",
+            "id": error_id
+        }
+
+    except Exception as e:
+
+        conn.rollback()
+
+        print("❌ ERROR DELETE:", repr(e))
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+
+        conn.close()
 @app.post("/admin/knowledge")
 
 def add_knowledge(
