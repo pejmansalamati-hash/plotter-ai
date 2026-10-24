@@ -663,3 +663,72 @@ def search_solution(user_text, plotter_type, connection):
 
         print("❌ LOW CONFIDENCE")
         return {"type": "ai"}
+    
+def get_relevant_context(user_text, plotter_type, connection, limit=3):
+    """
+    استخراج چند پاسخ تأییدشده و مرتبط برای ارسال به هوش مصنوعی.
+    این تابع نتیجه جست‌وجوی اصلی را تغییر نمی‌دهد.
+    """
+
+    rows = load_error_rows(plotter_type, connection)
+
+    if not rows:
+        return ""
+
+    detected_concepts = detect_concepts(user_text)
+    detected_codes = {
+        item["concept"] for item in detected_concepts
+    }
+
+    results = {}
+
+    for row in rows:
+        score = calculate_score(
+            user_text,
+            row["title"],
+            row["concept"],
+            row["synonym"],
+            row["relation_weight"]
+        )
+
+        if row["concept"] in detected_codes:
+            score += 25
+
+        error_id = row["error_id"]
+
+        if error_id not in results:
+            results[error_id] = {
+                "title": row["title"],
+                "solution": row["solution"],
+                "score": 0
+            }
+
+        results[error_id]["score"] += score
+
+    # فقط رکوردهایی را نگه می‌داریم که نشانه‌ای از ارتباط دارند.
+    relevant = [
+        item for item in results.values()
+        if item["score"] >= 8
+    ]
+
+    relevant.sort(
+        key=lambda item: item["score"],
+        reverse=True
+    )
+
+    relevant = relevant[:limit]
+
+    if not relevant:
+        return ""
+
+    context_parts = []
+
+    for index, item in enumerate(relevant, start=1):
+        context_parts.append(
+            f"سابقه تأییدشده {index}:\n"
+            f"عنوان مشکل: {item['title']}\n"
+            f"راهکار ثبت‌شده: {item['solution']}"
+        )
+
+    return "\n\n".join(context_parts)
+
