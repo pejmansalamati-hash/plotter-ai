@@ -692,9 +692,19 @@ async function logout() {
 
     }
 }
+async function testErrors() {
+
+    const response = await fetch("/admin/errors");
+
+    const data = await response.json();
+
+    console.log("ERRORS STATUS:", response.status);
+    console.log("ERRORS DATA:", data);
+
+}
 loadConcepts();
 loadPending();
-
+testErrors();
 </script>
 
 </body>
