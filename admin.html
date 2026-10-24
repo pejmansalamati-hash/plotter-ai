@@ -234,6 +234,26 @@
     </div>
 
 </div>
+    
+    <div class="card">
+        <h2>📚 مدیریت پایگاه دانش</h2>
+
+        <p style="color:#666;">
+            مشاهده، جست‌وجو، ویرایش و حذف تجربه‌های ذخیره‌شده شرکت
+        </p>
+
+        <input
+            id="knowledge-search"
+            type="text"
+            placeholder="جست‌وجو در عنوان، کلمات کلیدی یا راه‌حل..."
+            oninput="filterKnowledge()">
+
+        <div id="knowledge-status" class="status"></div>
+
+        <div id="knowledge-list">
+            در حال دریافت پایگاه دانش...
+        </div>
+    </div>
 
     <div class="card">
 
@@ -692,6 +712,181 @@ async function logout() {
 
     }
 }
+    
+let knowledgeItems = [];
+
+function escapeKnowledgeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, function (char) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[char];
+    });
+}
+
+async function loadKnowledge() {
+    const list = document.getElementById("knowledge-list");
+    const status = document.getElementById("knowledge-status");
+
+    list.innerHTML = "در حال دریافت اطلاعات...";
+
+    try {
+        const response = await fetch("/admin/errors");
+        const result = await response.json();
+
+        if (!response.ok || result.status !== "ok") {
+            throw new Error(result.detail || result.message || "دریافت اطلاعات ناموفق بود");
+        }
+
+        knowledgeItems = result.data || [];
+        filterKnowledge();
+
+        status.innerText = `تعداد رکوردها: ${knowledgeItems.length}`;
+    } catch (error) {
+        console.error("LOAD KNOWLEDGE ERROR:", error);
+        list.innerHTML = '<div class="empty">خطا در دریافت پایگاه دانش</div>';
+        status.innerText = error.message;
+    }
+}
+
+function filterKnowledge() {
+    const search = document.getElementById("knowledge-search").value
+        .trim()
+        .toLowerCase();
+
+    const filtered = knowledgeItems.filter(item => {
+        const text = [
+            item.title,
+            item.keywords,
+            item.solution,
+            item.plotter_type,
+            item.connection
+        ].join(" ").toLowerCase();
+
+        return text.includes(search);
+    });
+
+    renderKnowledge(filtered);
+}
+
+function renderKnowledge(items) {
+    const list = document.getElementById("knowledge-list");
+
+    if (!items.length) {
+        list.innerHTML = '<div class="empty">رکوردی پیدا نشد.</div>';
+        return;
+    }
+
+    list.innerHTML = items.map(item => `
+        <div class="pending-item">
+            <div class="question">
+                رکورد شماره ${item.id}
+            </div>
+
+            <label>نوع پلاتر</label>
+            <select id="knowledge-type-${item.id}">
+                <option value="جوهری" ${item.plotter_type === "جوهری" ? "selected" : ""}>جوهری</option>
+                <option value="قلمی" ${item.plotter_type === "قلمی" ? "selected" : ""}>قلمی</option>
+                <option value="نامشخص" ${item.plotter_type === "نامشخص" ? "selected" : ""}>نامشخص</option>
+            </select>
+
+            <label>نوع اتصال</label>
+            <select id="knowledge-connection-${item.id}">
+                <option value="USB" ${item.connection === "USB" ? "selected" : ""}>USB</option>
+                <option value="شبکه" ${item.connection === "شبکه" ? "selected" : ""}>شبکه</option>
+                <option value="نامشخص" ${item.connection === "نامشخص" ? "selected" : ""}>نامشخص</option>
+            </select>
+
+            <label>عنوان مشکل</label>
+            <input
+                id="knowledge-title-${item.id}"
+                value="${escapeKnowledgeHTML(item.title)}">
+
+            <label>کلمات کلیدی</label>
+            <input
+                id="knowledge-keywords-${item.id}"
+                value="${escapeKnowledgeHTML(item.keywords)}">
+
+            <label>راه‌حل</label>
+            <textarea id="knowledge-solution-${item.id}">${escapeKnowledgeHTML(item.solution)}</textarea>
+
+            <button class="btn-save" onclick="saveKnowledge(${item.id})">
+                💾 ذخیره تغییرات
+            </button>
+
+            <button class="btn-reject" onclick="deleteKnowledge(${item.id})">
+                🗑️ حذف رکورد
+            </button>
+        </div>
+    `).join("");
+}
+
+async function saveKnowledge(id) {
+    const data = {
+        plotter_type: document.getElementById(`knowledge-type-${id}`).value,
+        connection: document.getElementById(`knowledge-connection-${id}`).value,
+        title: document.getElementById(`knowledge-title-${id}`).value.trim(),
+        keywords: document.getElementById(`knowledge-keywords-${id}`).value.trim(),
+        solution: document.getElementById(`knowledge-solution-${id}`).value.trim()
+    };
+
+    if (!data.title || !data.solution) {
+        alert("عنوان مشکل و راه‌حل نمی‌توانند خالی باشند.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/admin/errors/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.status !== "updated") {
+            throw new Error(result.message || result.detail || "ذخیره انجام نشد");
+        }
+
+        alert("تغییرات ذخیره شد.");
+        await loadKnowledge();
+    } catch (error) {
+        console.error("SAVE KNOWLEDGE ERROR:", error);
+        alert("خطا در ذخیره: " + error.message);
+    }
+}
+
+async function deleteKnowledge(id) {
+    const confirmed = confirm(
+        `آیا مطمئنی رکورد شماره ${id} حذف شود؟ این کار قابل بازگشت نیست.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`/admin/errors/${id}`, {
+            method: "DELETE"
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.status !== "deleted") {
+            throw new Error(result.message || result.detail || "حذف انجام نشد");
+        }
+
+        alert("رکورد حذف شد.");
+        await loadKnowledge();
+    } catch (error) {
+        console.error("DELETE KNOWLEDGE ERROR:", error);
+        alert("خطا در حذف: " + error.message);
+    }
+}
+
 async function testErrors() {
 
     const response = await fetch("/admin/errors");
@@ -705,6 +900,7 @@ async function testErrors() {
 loadConcepts();
 loadPending();
 testErrors();
+loadKnowledge();
 </script>
 
 </body>
