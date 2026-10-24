@@ -203,7 +203,7 @@ def concept_match_score(user_text, title, keywords):
 
     return score
 # جستجو در دیتابیس
-from search import search_solution
+from search import search_solution, get_relevant_context
 # ذخیره سوال بدون جواب
 
 def save_unknown(question):
@@ -332,11 +332,15 @@ def ask_question(q: Question):
 
     print("DEBUG 2: AFTER save_unknown")
 
-    # چون پاسخ مرتبطی در DB پیدا نشده،
-    # زمینه نامرتبط به AI ارسال نمی‌کنیم.
-    context = ""
+    # استخراج سوابق مرتبط از پایگاه دانش برای کمک به هوش مصنوعی
+    context = get_relevant_context(
+        q.text,
+        q.plotter_type,
+        q.connection
+    )
 
-    print("DEBUG 3: EMPTY CONTEXT - ROUTING TO AI")
+    print("DEBUG 3: CONTEXT LENGTH:", len(context))
+    print("DEBUG 3: CONTEXT:", context)
 
     ai_answer = ask_ai(
     q.text,
