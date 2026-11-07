@@ -38,7 +38,7 @@ def admin_login_page():
 def admin_login(data: LoginData, request: Request):
 
     # فعلاً برای نسخه آزمایشی
-    if data.username == "expert" and data.password == "1234":
+    if data.username == "expert" and data.password == "@Booriapass1405#":
 
         request.session["expert"] = True
 
